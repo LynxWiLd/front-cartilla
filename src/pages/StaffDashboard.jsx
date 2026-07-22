@@ -218,7 +218,7 @@ export default function StaffDashboard() {
 
                 {pendingOrders.length > 0 && (
                   <div className="mt-2 text-xs text-gray-500">
-                    Último pedido: {timeAgo(pendingOrders[pendingOrders.length - 1].created_at)}
+                    Último pedido: {timeAgo(pendingOrders[pendingOrders.length - 1].createdAt || pendingOrders[pendingOrders.length - 1].created_at)}
                   </div>
                 )}
               </div>
