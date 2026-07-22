@@ -39,7 +39,7 @@ function MenuContent() {
     try { return JSON.parse(localStorage.getItem(CART_KEY)) || []; } catch { return []; }
   });
   const [showCart, setShowCart] = useState(false);
-  const [mesaBloqueada, setMesaBloqueada] = useState(false);
+  const [mesaStatus, setMesaStatus] = useState(null);
   const socket = useSocket();
 
   useEffect(() => {
@@ -82,7 +82,7 @@ function MenuContent() {
       return;
     }
 
-    if (mesaBloqueada) {
+    if (mesaStatus && mesaStatus !== "libre") {
       setToast({ message: "El mozo ya está atendiendo tu mesa, aguarda un momento", type: "error" });
       return;
     }
@@ -111,7 +111,7 @@ function MenuContent() {
     if (!mesa) return;
 
     const onStatus = ({ numero, status }) => {
-      if (numero === mesa) setMesaBloqueada(status !== "libre");
+      if (numero === mesa) setMesaStatus(status);
     };
     const onError = ({ message }) => setToast({ message, type: "error" });
 
@@ -181,12 +181,31 @@ function MenuContent() {
             )}
             <button
               onClick={llamarMozo}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-full font-semibold text-xs shadow-lg transition-all active:scale-95 bg-brand-yellow text-black"
+              disabled={mesaStatus && mesaStatus !== "libre"}
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-full font-semibold text-xs shadow-lg transition-all active:scale-95 ${
+                mesaStatus === "pendiente"
+                  ? "bg-gray-600 text-gray-300 cursor-not-allowed"
+                  : mesaStatus === "atendida"
+                  ? "bg-blue-600 text-white cursor-not-allowed"
+                  : "bg-brand-yellow text-black"
+              }`}
             >
-              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                <path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z" />
-              </svg>
-              <span>Llamar mozo</span>
+              {mesaStatus === "pendiente" ? (
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+              ) : mesaStatus === "atendida" ? (
+                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
+                </svg>
+              ) : (
+                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                  <path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z" />
+                </svg>
+              )}
+              <span>
+                {mesaStatus === "pendiente" ? "Pedido enviado" : mesaStatus === "atendida" ? "Mozo en camino" : "Llamar mozo"}
+              </span>
             </button>
           </div>
         </div>
@@ -209,16 +228,6 @@ function MenuContent() {
           )}
         </div>
       </header>
-
-      {mesaBloqueada && (
-        <div className="mx-4 mb-2 bg-blue-600/20 border border-blue-500/30 rounded-xl px-4 py-3 flex items-center gap-3 text-sm">
-          <span className="text-2xl">👨‍🍳</span>
-          <div>
-            <p className="text-blue-300 font-semibold">Mozo en camino</p>
-            <p className="text-blue-400/70 text-xs">Estamos preparando tu pedido, en un momento podrás pedir de nuevo</p>
-          </div>
-        </div>
-      )}
 
       <nav className="sticky top-0 z-50 bg-dark-bg/95 backdrop-blur-md border-b border-white/5">
         <div className="flex overflow-x-auto gap-1 px-4 py-3 scrollbar-none">
@@ -347,9 +356,20 @@ function MenuContent() {
                 </div>
                 <button
                   onClick={llamarMozo}
-                  className="w-full py-3 rounded-xl font-semibold text-sm active:scale-95 transition-all bg-brand-yellow text-black"
+                  disabled={mesaStatus && mesaStatus !== "libre"}
+                  className={`w-full py-3 rounded-xl font-semibold text-sm active:scale-95 transition-all ${
+                    mesaStatus === "pendiente"
+                      ? "bg-gray-600 text-gray-300 cursor-not-allowed"
+                      : mesaStatus === "atendida"
+                      ? "bg-blue-600 text-white cursor-not-allowed"
+                      : "bg-brand-yellow text-black"
+                  }`}
                 >
-                  Llamar mozo
+                  {mesaStatus === "pendiente"
+                    ? "Pedido enviado"
+                    : mesaStatus === "atendida"
+                    ? "Mozo en camino"
+                    : "Llamar mozo"}
                 </button>
               </div>
             )}
