@@ -255,7 +255,7 @@ function MenuContent() {
 
       <main className="px-4 py-6 space-y-10">
         {categories.map((cat) => {
-          const catItems = items.filter((i) => i.categoria_id === cat.id);
+          const catItems = items.filter((i) => i.categoriaId === cat.id);
           if (catItems.length === 0) return null;
 
           return (
