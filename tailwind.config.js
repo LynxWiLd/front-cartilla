@@ -16,7 +16,6 @@ export default {
         brand: {
           yellow: "#F5B041",
           red: "#E74C3C",
-          orange: "#E67E22",
         },
       },
     },
