@@ -15,11 +15,6 @@ export function SocketProvider({ tipo = "cliente", slug, children }) {
       opts.query = { slug };
     }
 
-    if (tipo === "staff") {
-      const token = localStorage.getItem("token");
-      if (token) opts.auth = { token };
-    }
-
     const s = io(SOCKET_URL, opts);
     setSocket(s);
     return () => s.disconnect();

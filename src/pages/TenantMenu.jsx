@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useParams } from "react-router-dom";
 import { api } from "../api";
+import { formatPrice } from "../lib/utils";
 import { SocketProvider, useSocket } from "../context/SocketContext";
 import Toast from "../components/Toast";
 
@@ -18,10 +19,6 @@ const gradients = {
   adicionales: "from-purple-600 to-pink-700",
   default: "from-gray-600 to-gray-800",
 };
-
-function formatPrice(n) {
-  return "$" + Number(n).toLocaleString("es-AR");
-}
 
 function getTableFromURL() {
   const params = new URLSearchParams(window.location.search);
@@ -175,7 +172,7 @@ function MenuContent() {
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-3">
             <img
-              src="/media/logo/lg-prueba.jpg"
+              src="/media/logo/logo.jpg"
               alt={tenant.nombre}
               className="h-14 w-14 rounded-2xl object-cover shadow-lg ring-2 ring-brand-yellow/30"
             />

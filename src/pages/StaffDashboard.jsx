@@ -2,11 +2,33 @@ import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { io } from "socket.io-client";
 import { useAuth } from "../context/AuthContext";
+import { formatPrice } from "../lib/utils";
 
 const SOCKET_URL = import.meta.env.VITE_SERVER_URL || "http://localhost:3001";
 
-function formatPrice(n) {
-  return "$" + Number(n).toLocaleString("es-AR");
+function timeAgo(iso) {
+  const diff = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
+  if (diff < 60) return "ahora";
+  const min = Math.floor(diff / 60);
+  return `hace ${min} min`;
+}
+
+function statusBadge(status) {
+  const styles = {
+    pendiente: "bg-brand-yellow text-black",
+    atendida: "bg-blue-600 text-white",
+    libre: "bg-green-600 text-white",
+  };
+  const labels = {
+    pendiente: "Pendiente",
+    atendida: "Atendiendo",
+    libre: "Libre",
+  };
+  return (
+    <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${styles[status] || "bg-gray-600 text-white"}`}>
+      {labels[status] || status}
+    </span>
+  );
 }
 
 export default function StaffDashboard() {
@@ -100,31 +122,6 @@ export default function StaffDashboard() {
   const despachar = useCallback((mesa) => {
     socket?.emit("despachar-mesa", { mesa });
   }, [socket]);
-
-  const timeAgo = (iso) => {
-    const diff = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
-    if (diff < 60) return "ahora";
-    const min = Math.floor(diff / 60);
-    return `hace ${min} min`;
-  };
-
-  const statusBadge = (status) => {
-    const styles = {
-      pendiente: "bg-brand-yellow text-black",
-      atendida: "bg-blue-600 text-white",
-      libre: "bg-green-600 text-white",
-    };
-    const labels = {
-      pendiente: "Pendiente",
-      atendida: "Atendiendo",
-      libre: "Libre",
-    };
-    return (
-      <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${styles[status] || "bg-gray-600 text-white"}`}>
-        {labels[status] || status}
-      </span>
-    );
-  };
 
   const mesasList = Object.entries(mesas)
     .filter(([, m]) => m.status !== "libre" || m.orders.length > 0)
