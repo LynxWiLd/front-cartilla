@@ -18,6 +18,9 @@ export default function OwnerPanel() {
   const [catForm, setCatForm] = useState({ nombre: "", emoji: "🍔" });
   const [itemForm, setItemForm] = useState({ nombre: "", descripcion: "", precio: "", imagen: "", tags: "", categoria_id: "" });
   const [staffForm, setStaffForm] = useState({ nombre: "", email: "", password: "" });
+  const [maxMesas, setMaxMesas] = useState(10);
+  const [mesas, setMesas] = useState([]);
+  const [mesasLoading, setMesasLoading] = useState(false);
 
   useEffect(() => {
     if (!loading && (!user || user.role !== "OWNER")) navigate("/");
@@ -38,9 +41,34 @@ export default function OwnerPanel() {
     }
   };
 
+  const loadMesas = async () => {
+    setMesasLoading(true);
+    try {
+      const [conf, lista] = await Promise.all([
+        api("/mesas/config"),
+        api("/mesas"),
+      ]);
+      setMaxMesas(conf.maxMesas);
+      setMesas(lista);
+    } catch {}
+    setMesasLoading(false);
+  };
+
+  const saveMesas = async () => {
+    try {
+      const res = await apiPut("/mesas/config", { maxMesas });
+      setMaxMesas(res.maxMesas);
+      setMesas(res.mesas);
+    } catch (err) { alert(err.message); }
+  };
+
   useEffect(() => {
     if (user?.role === "OWNER") loadData();
   }, [user]);
+
+  useEffect(() => {
+    if (user?.role === "OWNER" && tab === "mesas") loadMesas();
+  }, [user, tab]);
 
   const saveCategory = async (e) => {
     e.preventDefault();
@@ -105,11 +133,11 @@ export default function OwnerPanel() {
           <button onClick={() => { logout(); navigate("/"); }} className="text-gray-400 text-sm hover:text-white transition-colors">Salir</button>
         </div>
         <nav className="flex gap-2">
-          {["menu", "staff"].map((t) => (
+          {["menu", "mesas", "staff"].map((t) => (
             <button key={t} onClick={() => setTab(t)}
               className={`px-4 py-1.5 rounded-full text-sm font-semibold transition-colors ${tab === t ? "bg-brand-yellow text-black" : "text-gray-400 hover:text-white"}`}
             >
-              {t === "menu" ? "🍔 Menú" : "👥 Mozos"}
+              {t === "menu" ? "🍔 Menú" : t === "mesas" ? "🪑 Mesas" : "👥 Mozos"}
             </button>
           ))}
         </nav>
@@ -160,6 +188,60 @@ export default function OwnerPanel() {
                 </div>
               );
             })}
+          </>
+        )}
+
+        {tab === "mesas" && (
+          <>
+            {mesasLoading ? (
+              <p className="text-gray-500 text-center py-12 animate-pulse">Cargando mesas...</p>
+            ) : (
+              <div className="space-y-4">
+                <div className="bg-dark-card rounded-2xl border border-white/5 p-5">
+                  <h3 className="font-heading text-xl text-white tracking-wide mb-3">Configurar mesas</h3>
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="number" min="1" max="100"
+                      value={maxMesas}
+                      onChange={(e) => setMaxMesas(Number(e.target.value))}
+                      className="w-24 bg-dark-surface text-white text-center px-4 py-3 rounded-xl border border-white/10 focus:outline-none focus:border-brand-yellow"
+                    />
+                    <button onClick={saveMesas}
+                      className="bg-brand-yellow text-black font-semibold px-6 py-3 rounded-xl text-sm active:scale-95 transition-all"
+                    >Guardar</button>
+                  </div>
+                  <p className="text-gray-500 text-xs mt-2">Cantidad total de mesas del local</p>
+                </div>
+
+                <div>
+                  <h3 className="font-heading text-lg text-white tracking-wide mb-3">Estado actual</h3>
+                  <div className="grid grid-cols-5 sm:grid-cols-8 gap-2">
+                    {Array.from({ length: maxMesas }, (_, i) => i + 1).map((num) => {
+                      const mesa = mesas.find((m) => m.numero === num);
+                      const status = mesa?.status || "libre";
+                      const statusColors = {
+                        libre: "bg-green-600/20 text-green-400 border-green-600/30",
+                        pendiente: "bg-brand-yellow/20 text-brand-yellow border-brand-yellow/30",
+                        atendida: "bg-blue-600/20 text-blue-400 border-blue-600/30",
+                      };
+                      const statusIcons = {
+                        libre: "🟢",
+                        pendiente: "🟡",
+                        atendida: "🔵",
+                      };
+                      return (
+                        <div key={num}
+                          className={`aspect-square rounded-xl border flex flex-col items-center justify-center text-sm font-semibold ${statusColors[status] || "bg-gray-600/20 text-gray-400 border-gray-600/30"}`}
+                        >
+                          <span className="text-lg leading-none mb-0.5">{statusIcons[status]}</span>
+                          <span>{num}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            )}
           </>
         )}
 
