@@ -5,6 +5,7 @@ import StaffLogin from "./pages/StaffLogin";
 import StaffDashboard from "./pages/StaffDashboard";
 import SuperAdmin from "./pages/SuperAdmin";
 import OwnerPanel from "./pages/OwnerPanel";
+import NotFound from "./pages/NotFound";
 
 export default function App() {
   return (
@@ -17,7 +18,7 @@ export default function App() {
           <Route path="/staff/dashboard" element={<StaffDashboard />} />
           <Route path="/app/admin" element={<SuperAdmin />} />
           <Route path="/app/panel" element={<OwnerPanel />} />
-          <Route path="*" element={<Navigate to="/menu/big-fat-burger" replace />} />
+          <Route path="*" element={<NotFound />} />
         </Routes>
       </AuthProvider>
     </BrowserRouter>

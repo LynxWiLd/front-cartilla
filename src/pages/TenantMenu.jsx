@@ -33,8 +33,6 @@ function MenuContent() {
   const [error, setError] = useState(null);
   const [toast, setToast] = useState(null);
   const [showAllergens, setShowAllergens] = useState(false);
-  const [cooldown, setCooldown] = useState(0);
-  const COOLDOWN_SECONDS = 30;
   const CART_KEY = `cart:${slug}`;
 
   const [cart, setCart] = useState(() => {
@@ -102,25 +100,10 @@ function MenuContent() {
         clearCart();
         setShowCart(false);
       });
-      setCooldown(COOLDOWN_SECONDS);
     } else {
       setToast({ message: "Error de conexión", type: "error" });
     }
   };
-
-  useEffect(() => {
-    if (cooldown <= 0) return;
-    const id = setInterval(() => {
-      setCooldown((prev) => {
-        if (prev <= 1) {
-          clearInterval(id);
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-    return () => clearInterval(id);
-  }, [cooldown]);
 
   useEffect(() => {
     if (!socket) return;
@@ -198,13 +181,12 @@ function MenuContent() {
             )}
             <button
               onClick={llamarMozo}
-              disabled={cooldown > 0}
-              className={`flex items-center gap-1.5 px-3 py-2 rounded-full font-semibold text-xs shadow-lg transition-all active:scale-95 ${cooldown > 0 ? "bg-gray-500 text-gray-300 cursor-not-allowed opacity-60" : "bg-brand-yellow text-black"}`}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-full font-semibold text-xs shadow-lg transition-all active:scale-95 bg-brand-yellow text-black"
             >
               <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                 <path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z" />
               </svg>
-              <span>{cooldown > 0 ? `Espera (${cooldown}s)` : "Llamar mozo"}</span>
+              <span>Llamar mozo</span>
             </button>
           </div>
         </div>
@@ -365,10 +347,9 @@ function MenuContent() {
                 </div>
                 <button
                   onClick={llamarMozo}
-                  disabled={cooldown > 0}
-                  className={`w-full py-3 rounded-xl font-semibold text-sm active:scale-95 transition-all ${cooldown > 0 ? "bg-gray-500 text-gray-300 cursor-not-allowed opacity-60" : "bg-brand-yellow text-black"}`}
+                  className="w-full py-3 rounded-xl font-semibold text-sm active:scale-95 transition-all bg-brand-yellow text-black"
                 >
-                  {cooldown > 0 ? `Espera (${cooldown}s)` : "Llamar mozo"}
+                  Llamar mozo
                 </button>
               </div>
             )}

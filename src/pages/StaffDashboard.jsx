@@ -2,15 +2,26 @@ import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { io } from "socket.io-client";
 import { useAuth } from "../context/AuthContext";
+import { api } from "../api";
 import { formatPrice } from "../lib/utils";
 
 const SOCKET_URL = import.meta.env.VITE_SERVER_URL || "http://localhost:3001";
 
 function timeAgo(iso) {
+  if (!iso) return "";
   const diff = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
   if (diff < 60) return "ahora";
   const min = Math.floor(diff / 60);
   return `hace ${min} min`;
+}
+
+function formatDate(iso) {
+  if (!iso) return "";
+  const d = new Date(iso);
+  return d.toLocaleDateString("es-AR", {
+    day: "2-digit", month: "2-digit", year: "numeric",
+    hour: "2-digit", minute: "2-digit",
+  });
 }
 
 function statusBadge(status) {
@@ -32,8 +43,11 @@ function statusBadge(status) {
 }
 
 export default function StaffDashboard() {
-  const [mesas, setMesas] = useState({}); // { [numero]: { status, orders: [] } }
+  const [mesas, setMesas] = useState({});
   const [socket, setSocket] = useState(null);
+  const [tab, setTab] = useState("activas");
+  const [history, setHistory] = useState([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
   const { user, loading, logout } = useAuth();
   const navigate = useNavigate();
 
@@ -123,6 +137,22 @@ export default function StaffDashboard() {
     socket?.emit("despachar-mesa", { mesa: Number(mesa) });
   }, [socket]);
 
+  const loadHistory = useCallback(async () => {
+    setHistoryLoading(true);
+    try {
+      const data = await api("/api/orders/history");
+      setHistory(data);
+    } catch {
+      setHistory([]);
+    } finally {
+      setHistoryLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (tab === "historial") loadHistory();
+  }, [tab, loadHistory]);
+
   const mesasList = Object.entries(mesas)
     .filter(([, m]) => m.status !== "libre" || m.orders.length > 0)
     .sort(([a], [b]) => Number(a) - Number(b));
@@ -133,14 +163,7 @@ export default function StaffDashboard() {
     <div className="min-h-screen bg-dark-bg">
       <header className="sticky top-0 z-50 bg-dark-bg/95 backdrop-blur-md border-b border-white/5 px-4 py-3 flex items-center justify-between">
         <div>
-          <h1 className="font-heading text-2xl text-white tracking-wide">
-            🛎️ Mesas
-            {mesasList.length > 0 && (
-              <span className="ml-2 text-sm font-body bg-brand-red text-white px-2 py-0.5 rounded-full align-middle">
-                {mesasList.length}
-              </span>
-            )}
-          </h1>
+          <h1 className="font-heading text-2xl text-white tracking-wide">🛎️ Panel</h1>
           {user && <p className="text-xs text-gray-500">{user.nombre}</p>}
         </div>
         <button
@@ -151,79 +174,154 @@ export default function StaffDashboard() {
         </button>
       </header>
 
-      {mesasList.length === 0 ? (
-        <div className="flex flex-col items-center justify-center mt-32 text-gray-500">
-          <span className="text-6xl mb-4">🛎️</span>
-          <p className="text-lg font-medium">Sin novedades</p>
-          <p className="text-sm">Las mesas aparecerán aquí cuando llamen</p>
-        </div>
-      ) : (
-        <div className="p-4 space-y-3">
-          {mesasList.map(([numero, mesa]) => {
-            const pendingOrders = mesa.orders;
-            const allItems = pendingOrders.flatMap((o) => {
-              try { return JSON.parse(o.items || "[]"); } catch { return []; }
-            });
-            const total = allItems.reduce((s, i) => s + i.precio * i.cantidad, 0);
+      <div className="flex border-b border-white/5">
+        <button
+          onClick={() => setTab("activas")}
+          className={`flex-1 py-3 text-sm font-semibold transition-colors ${tab === "activas" ? "text-brand-yellow border-b-2 border-brand-yellow" : "text-gray-500"}`}
+        >
+          Activas
+          {mesasList.length > 0 && (
+            <span className="ml-2 bg-brand-red text-white text-xs px-2 py-0.5 rounded-full">{mesasList.length}</span>
+          )}
+        </button>
+        <button
+          onClick={() => setTab("historial")}
+          className={`flex-1 py-3 text-sm font-semibold transition-colors ${tab === "historial" ? "text-brand-yellow border-b-2 border-brand-yellow" : "text-gray-500"}`}
+        >
+          Historial
+        </button>
+      </div>
 
-            return (
-              <div
-                key={numero}
-                className={`bg-dark-card rounded-2xl border p-5 animate-fade-in ${mesa.status === "pendiente" ? "border-brand-yellow/30" : "border-blue-500/30"}`}
-              >
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-3">
-                    <span className="font-heading text-4xl text-brand-yellow">#{numero}</span>
-                    {statusBadge(mesa.status)}
-                  </div>
-                  <div className="flex gap-2">
-                    {mesa.status === "pendiente" && (
-                      <button
-                        onClick={() => atender(numero)}
-                        className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-xl font-semibold text-sm active:scale-95 transition-all"
-                      >
-                        Atender
-                      </button>
-                    )}
-                    {mesa.status === "atendida" && (
-                      <button
-                        onClick={() => despachar(numero)}
-                        className="bg-green-600 hover:bg-green-500 text-white px-4 py-2 rounded-xl font-semibold text-sm active:scale-95 transition-all"
-                      >
-                        Despachar
-                      </button>
-                    )}
-                  </div>
-                </div>
+      {tab === "activas" ? (
+        mesasList.length === 0 ? (
+          <div className="flex flex-col items-center justify-center mt-32 text-gray-500">
+            <span className="text-6xl mb-4">🛎️</span>
+            <p className="text-lg font-medium">Sin novedades</p>
+            <p className="text-sm">Las mesas aparecerán aquí cuando llamen</p>
+          </div>
+        ) : (
+          <div className="p-4 space-y-3">
+            {mesasList.map(([numero, mesa]) => {
+              const pendingOrders = mesa.orders;
+              const allItems = pendingOrders.flatMap((o) => {
+                try { return JSON.parse(o.items || "[]"); } catch { return []; }
+              });
+              const total = allItems.reduce((s, i) => s + i.precio * i.cantidad, 0);
 
-                {allItems.length > 0 ? (
-                  <div className="space-y-1.5">
-                    {allItems.map((item, idx) => (
-                      <div key={idx} className="flex items-center justify-between text-sm">
-                        <span className="text-gray-300">
-                          <span className="text-brand-yellow font-semibold mr-2">{item.cantidad}x</span>
-                          {item.nombre}
-                        </span>
-                        <span className="text-gray-400">{formatPrice(item.precio)}</span>
-                      </div>
-                    ))}
-                    <div className="border-t border-white/10 pt-1.5 mt-1.5 flex justify-between text-sm">
-                      <span className="text-gray-400 font-medium">Total</span>
-                      <span className="text-brand-yellow font-heading">{formatPrice(total)}</span>
+              return (
+                <div
+                  key={numero}
+                  className={`bg-dark-card rounded-2xl border p-5 animate-fade-in ${mesa.status === "pendiente" ? "border-brand-yellow/30" : "border-blue-500/30"}`}
+                >
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-3">
+                      <span className="font-heading text-4xl text-brand-yellow">#{numero}</span>
+                      {statusBadge(mesa.status)}
+                    </div>
+                    <div className="flex gap-2">
+                      {mesa.status === "pendiente" && (
+                        <button
+                          onClick={() => atender(numero)}
+                          className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-xl font-semibold text-sm active:scale-95 transition-all"
+                        >
+                          Atender
+                        </button>
+                      )}
+                      {mesa.status === "atendida" && (
+                        <button
+                          onClick={() => despachar(numero)}
+                          className="bg-green-600 hover:bg-green-500 text-white px-4 py-2 rounded-xl font-semibold text-sm active:scale-95 transition-all"
+                        >
+                          Despachar
+                        </button>
+                      )}
                     </div>
                   </div>
-                ) : (
-                  <p className="text-gray-400 text-sm">Mesa {numero} necesita asistencia</p>
-                )}
 
-                {pendingOrders.length > 0 && (
-                  <div className="mt-2 text-xs text-gray-500">
-                    Último pedido: {timeAgo(pendingOrders[pendingOrders.length - 1].createdAt || pendingOrders[pendingOrders.length - 1].created_at)}
+                  {allItems.length > 0 ? (
+                    <div className="space-y-1.5">
+                      {allItems.map((item, idx) => (
+                        <div key={idx} className="flex items-center justify-between text-sm">
+                          <span className="text-gray-300">
+                            <span className="text-brand-yellow font-semibold mr-2">{item.cantidad}x</span>
+                            {item.nombre}
+                          </span>
+                          <span className="text-gray-400">{formatPrice(item.precio)}</span>
+                        </div>
+                      ))}
+                      <div className="border-t border-white/10 pt-1.5 mt-1.5 flex justify-between text-sm">
+                        <span className="text-gray-400 font-medium">Total</span>
+                        <span className="text-brand-yellow font-heading">{formatPrice(total)}</span>
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-gray-400 text-sm">Mesa {numero} necesita asistencia</p>
+                  )}
+
+                  {pendingOrders.length > 0 && (
+                    <div className="mt-2 text-xs text-gray-500">
+                      Último pedido: {timeAgo(pendingOrders[pendingOrders.length - 1].createdAt || pendingOrders[pendingOrders.length - 1].created_at)}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )
+      ) : (
+        <div className="p-4">
+          {historyLoading ? (
+            <div className="flex justify-center mt-20">
+              <div className="text-gray-500 animate-pulse">Cargando historial...</div>
+            </div>
+          ) : history.length === 0 ? (
+            <div className="flex flex-col items-center justify-center mt-20 text-gray-500">
+              <span className="text-6xl mb-4">📋</span>
+              <p className="text-lg font-medium">Sin historial</p>
+              <p className="text-sm">Los pedidos despachados aparecerán aquí</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {history.map((order) => {
+                const items = (() => { try { return JSON.parse(order.items || "[]"); } catch { return []; } })();
+                const total = items.reduce((s, i) => s + i.precio * i.cantidad, 0);
+
+                return (
+                  <div key={order.id} className="bg-dark-card rounded-2xl border border-white/5 p-5">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-3">
+                        <span className="font-heading text-3xl text-brand-yellow">#{order.mesa}</span>
+                        <span className="text-xs bg-green-600/20 text-green-400 px-2.5 py-1 rounded-full font-semibold">Despachado</span>
+                      </div>
+                      <span className="text-xs text-gray-500">{formatDate(order.resolvedAt)}</span>
+                    </div>
+
+                    {items.length > 0 && (
+                      <div className="space-y-1.5">
+                        {items.map((item, idx) => (
+                          <div key={idx} className="flex items-center justify-between text-sm">
+                            <span className="text-gray-300">
+                              <span className="text-brand-yellow font-semibold mr-2">{item.cantidad}x</span>
+                              {item.nombre}
+                            </span>
+                            <span className="text-gray-400">{formatPrice(item.precio)}</span>
+                          </div>
+                        ))}
+                        <div className="border-t border-white/10 pt-1.5 mt-1.5 flex justify-between text-sm">
+                          <span className="text-gray-400 font-medium">Total</span>
+                          <span className="text-brand-yellow font-heading">{formatPrice(total)}</span>
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="mt-2 text-xs text-gray-600">
+                      Pedido: {formatDate(order.createdAt)}
+                    </div>
                   </div>
-                )}
-              </div>
-            );
-          })}
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
     </div>
