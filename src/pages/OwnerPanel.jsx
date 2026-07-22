@@ -149,7 +149,7 @@ export default function OwnerPanel() {
                           {item.descripcion && <p className="text-gray-500 text-xs truncate">{item.descripcion}</p>}
                         </div>
                         <div className="flex gap-2 shrink-0 ml-2">
-                          <button onClick={() => { setEditItem(item); setItemForm({ ...item, precio: String(item.precio) }); setShowItemForm(true); }}
+                          <button onClick={() => { setEditItem(item); setItemForm({ ...item, precio: String(item.precio), categoria_id: item.categoriaId || "" }); setShowItemForm(true); }}
                             className="text-gray-400 text-xs hover:text-white transition-colors">Editar</button>
                           <button onClick={() => deleteItem(item.id)}
                             className="text-brand-red text-xs hover:text-white transition-colors">Eliminar</button>

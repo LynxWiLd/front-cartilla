@@ -116,11 +116,11 @@ export default function StaffDashboard() {
   }, [user, loading, navigate]);
 
   const atender = useCallback((mesa) => {
-    socket?.emit("atender-mesa", { mesa });
+    socket?.emit("atender-mesa", { mesa: Number(mesa) });
   }, [socket]);
 
   const despachar = useCallback((mesa) => {
-    socket?.emit("despachar-mesa", { mesa });
+    socket?.emit("despachar-mesa", { mesa: Number(mesa) });
   }, [socket]);
 
   const mesasList = Object.entries(mesas)
